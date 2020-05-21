@@ -1,0 +1,71 @@
+version: "3.7"
+services:
+  db_host:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pg12
+    volumes:
+      - ./dockers/postgres:/var/lib/postgresql/data
+      - ${PWD}/dockers/mytmp:/tmp:rw      
+    ports: 
+      - "5432:5432"
+    networks: 
+      telega_network:
+        ipv4_address: 172.21.0.11
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sportorg
+
+# https://stackoverflow.com/questions/30547274/docker-compose-anyway-to-specify-a-redis-conf-file
+  redis_host:
+    container_name: redis6
+    image: redis:6.0
+    #command: ["redis-server", "--appendonly", "no"]
+    command: [sh, -c, "rm -f /data/dump.rdb && redis-server --maxmemory 256mb"]  # disable persistence    
+    hostname: redis
+    sysctls:
+      net.core.somaxconn: '32768' # исправление warning
+    ports: 
+      - "6379:6379"  
+    networks:   
+      telega_network:
+        ipv4_address: 172.21.0.15
+    volumes:
+      - ${PWD}/dockers/redis:/data:rw
+      - ${PWD}/dockers/redis/redis.conf:/usr/local/etc/redis/redis.conf      
+    environment: 
+      - ALLOW_EMPTY_PASSWORD=yes
+    #  - REDIS_AOF_ENABLED=no
+
+  db_host_dorgis:
+    image: postgres:9.5
+    container_name: pg_dorgis
+    volumes:
+      - ./dockers/postgres_dorgis:/var/lib/postgresql/data
+      - ${PWD}/dockers/mytmp:/tmp:rw      
+    ports: 
+      - "54321:5432"
+    networks:
+      telega_network:
+        ipv4_address: 172.21.0.10
+    environment:
+      POSTGRES_PASSWORD: postgres
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}    
+    volumes:
+      - ./dockers/pgadmin:/root/.pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - telega_network
+    restart: unless-stopped
+
+networks:
+  telega_network:
+    driver: bridge

@@ -1,0 +1,7 @@
+*.env
+dockers/
+*.sql
+*.txt
+SportsOrganizerBot
+trash.go
+texts.go
